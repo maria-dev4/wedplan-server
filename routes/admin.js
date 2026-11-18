@@ -168,4 +168,45 @@ router.patch("/users/:id/block", async (req, res) => {
   }
 });
 
+router.get("/transactions", async (req, res) => {
+  try {
+    const items = await getDB()
+      .collection("transactions")
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    const vendorIds = [...new Set(items.map((t) => t.vendorId))]
+      .filter((id) => ObjectId.isValid(id))
+      .map((id) => new ObjectId(id));
+
+    const vendors = vendorIds.length
+      ? await users()
+          .find({ _id: { $in: vendorIds } })
+          .project({ name: 1, email: 1, image: 1, businessName: 1 })
+          .toArray()
+      : [];
+
+    const vendorMap = new Map(vendors.map((v) => [v._id.toString(), v]));
+
+    res.json({
+      transactions: items.map((transaction) => {
+        const vendor = vendorMap.get(transaction.vendorId);
+        return {
+          ...transaction,
+          vendor: vendor
+            ? {
+                name: vendor.businessName || vendor.name,
+                email: vendor.email,
+                image: vendor.image,
+              }
+            : null,
+        };
+      }),
+    });
+  } catch {
+    res.status(500).json({ message: "Failed to load transactions" });
+  }
+});
+
 export default router;

@@ -1,4 +1,6 @@
 import "dotenv/config";
+import bookingsRouter from "./routes/bookings.js";
+import statsRouter from "./routes/stats.js";
 import express from "express";
 import cors from "cors";
 import { connectDB } from "./config/db.js";
@@ -21,6 +23,8 @@ app.get("/api/me", verifyToken, (req, res) => {
 
 app.use("/api/services", servicesRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/bookings", bookingsRouter);
+app.use("/api/stats", statsRouter);
 
 const port = process.env.PORT || 5000;
 

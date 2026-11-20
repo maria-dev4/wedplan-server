@@ -12,7 +12,21 @@ import { stripeWebhook } from "./routes/webhook.js";
 
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+const origins = (process.env.CLIENT_URL || "")
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean);
+
+app.use(cors({ origin: origins, credentials: true }));
+
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch {
+    res.status(500).json({ message: "Database connection failed" });
+  }
+});
 
 app.post(
   "/api/webhooks/stripe",
@@ -36,13 +50,14 @@ app.use("/api/bookings", bookingsRouter);
 app.use("/api/stats", statsRouter);
 app.use("/api/payments", paymentsRouter);
 
+app.use((req, res) => {
+  res.status(404).json({ message: "Route not found" });
+});
+
 const port = process.env.PORT || 5000;
 
-connectDB()
-  .then(() => {
-    app.listen(port, () => console.log(`Server running on port ${port}`));
-  })
-  .catch((error) => {
-    console.error("Database connection failed", error);
-    process.exit(1);
-  });
+if (!process.env.VERCEL) {
+  app.listen(port, () => console.log(`Server running on port ${port}`));
+}
+
+export default app;

@@ -1,16 +1,25 @@
 import "dotenv/config";
-import bookingsRouter from "./routes/bookings.js";
-import statsRouter from "./routes/stats.js";
 import express from "express";
 import cors from "cors";
 import { connectDB } from "./config/db.js";
 import { verifyToken } from "./middleware/auth.js";
 import servicesRouter from "./routes/services.js";
 import adminRouter from "./routes/admin.js";
+import bookingsRouter from "./routes/bookings.js";
+import statsRouter from "./routes/stats.js";
+import paymentsRouter from "./routes/payments.js";
+import { stripeWebhook } from "./routes/webhook.js";
 
 const app = express();
 
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+
+app.post(
+  "/api/webhooks/stripe",
+  express.raw({ type: "application/json" }),
+  stripeWebhook,
+);
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
@@ -25,6 +34,7 @@ app.use("/api/services", servicesRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/bookings", bookingsRouter);
 app.use("/api/stats", statsRouter);
+app.use("/api/payments", paymentsRouter);
 
 const port = process.env.PORT || 5000;
 

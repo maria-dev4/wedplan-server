@@ -124,7 +124,7 @@ router.get("/", async (req, res) => {
       .toArray();
 
     res.json({
-      services: items,
+      services: await withPremium(items),
       total,
       page: pageNumber,
       totalPages: Math.ceil(total / pageSize),
@@ -141,7 +141,7 @@ router.get("/featured", async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(6)
       .toArray();
-    res.json({ services: items });
+    res.json({ services: await withPremium(items) });
   } catch {
     res.status(500).json({ message: "Failed to load featured services" });
   }
@@ -174,7 +174,8 @@ router.get("/:id", async (req, res) => {
         .status(404)
         .json({ message: "Service not found or not available" });
     }
-    res.json({ service: item });
+    const [service] = await withPremium([item]);
+    res.json({ service });
   } catch {
     res.status(500).json({ message: "Failed to load service" });
   }

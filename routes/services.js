@@ -75,6 +75,31 @@ async function hasReachedLimit(user, excludeId) {
   return count >= FREE_LIMIT;
 }
 
+async function withPremium(items) {
+  if (!items.length) return items;
+
+  const vendorIds = [...new Set(items.map((s) => s.vendorId))]
+    .filter((id) => ObjectId.isValid(id))
+    .map((id) => new ObjectId(id));
+
+  const vendors = await getDB()
+    .collection("users")
+    .find({ _id: { $in: vendorIds } })
+    .project({ subscriptionPlan: 1, subscriptionExpiresAt: 1 })
+    .toArray();
+
+  const premiumIds = new Set(
+    vendors
+      .filter((vendor) => isPremium(vendor))
+      .map((vendor) => vendor._id.toString()),
+  );
+
+  return items.map((service) => ({
+    ...service,
+    vendorPremium: premiumIds.has(service.vendorId),
+  }));
+}
+
 router.get("/", async (req, res) => {
   try {
     const search = String(req.query.search || "").trim();
@@ -182,12 +207,10 @@ router.post("/", verifyToken, requireRole("vendor"), async (req, res) => {
       updatedAt: now,
     });
 
-    res
-      .status(201)
-      .json({
-        message: "Service submitted for approval",
-        id: result.insertedId,
-      });
+    res.status(201).json({
+      message: "Service submitted for approval",
+      id: result.insertedId,
+    });
   } catch {
     res.status(500).json({ message: "Failed to create service" });
   }
